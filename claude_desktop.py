@@ -847,14 +847,29 @@ class ExpandableInput(QPlainTextEdit):
         super().__init__(parent)
         self.setObjectName("inputField")
         self.setPlaceholderText("Message Claude...  (Enter = send, Shift+Enter = newline)")
-        self.setMaximumHeight(160)
         self.setMinimumHeight(48)
+        self.setMaximumHeight(300)
+        self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
+        self.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
         self.document().contentsChanged.connect(self._adjust_height)
         self._adjust_height()
 
     def _adjust_height(self):
-        doc_height = self.document().size().toSize().height() + 20
-        self.setFixedHeight(max(48, min(160, doc_height)))
+        doc = self.document()
+        margins = self.contentsMargins()
+        # Calculate actual height from document layout
+        doc_layout = doc.documentLayout()
+        if doc_layout is not None:
+            height = int(doc_layout.documentSize().height())
+        else:
+            height = int(doc.size().height())
+        # Add padding: document margins + widget margins + extra breathing room
+        frame_width = self.frameWidth() * 2
+        total = height + margins.top() + margins.bottom() + frame_width + 16
+
+        clamped = max(48, min(300, total))
+        if self.height() != clamped:
+            self.setFixedHeight(clamped)
 
     def keyPressEvent(self, event):
         if event.key() in (Qt.Key.Key_Return, Qt.Key.Key_Enter):
