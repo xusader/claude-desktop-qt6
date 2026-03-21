@@ -70,13 +70,74 @@ DEFAULT_CONFIG = {
     "color_code_bg": "#0f1218",
 }
 
-MODELS = [
+MODELS_FALLBACK = [
     "claude-opus-4-6",
     "claude-opus-4-5-20251101",
     "claude-opus-4-20250514",
     "claude-sonnet-4-20250514",
     "claude-haiku-4-5-20251001",
 ]
+
+# Cache for fetched models
+_cached_models: list[str] | None = None
+
+
+def fetch_models(api_key: str) -> list[str]:
+    """Fetch available models from the Anthropic API (GET /v1/models).
+    Returns a sorted list of model IDs, falling back to MODELS_FALLBACK on error."""
+    global _cached_models
+    if _cached_models is not None:
+        return _cached_models
+
+    if not api_key:
+        return list(MODELS_FALLBACK)
+
+    try:
+        import urllib.request
+        req = urllib.request.Request(
+            "https://api.anthropic.com/v1/models?limit=50",
+            headers={
+                "x-api-key": api_key,
+                "anthropic-version": "2023-06-01",
+            },
+        )
+        with urllib.request.urlopen(req, timeout=5) as resp:
+            data = json.loads(resp.read().decode())
+
+        models = []
+        for m in data.get("data", []):
+            mid = m.get("id", "")
+            # Only include claude models, skip deprecated/legacy
+            if mid.startswith("claude-") and "claude-2" not in mid and "claude-3-" not in mid:
+                models.append(mid)
+
+        if models:
+            # Sort: newest/biggest first (opus before sonnet before haiku)
+            def _sort_key(name):
+                order = 0
+                if "opus" in name:
+                    order = 0
+                elif "sonnet" in name:
+                    order = 1
+                elif "haiku" in name:
+                    order = 2
+                # Within same tier, sort by version descending
+                return (order, name.count("-"), name)
+
+            models.sort(key=_sort_key)
+            _cached_models = models
+            return models
+
+    except Exception as e:
+        sys.stderr.write(f"[claude-desktop] Failed to fetch models: {e}\n")
+
+    return list(MODELS_FALLBACK)
+
+
+def invalidate_model_cache():
+    """Clear the cached model list so next fetch_models() call re-fetches."""
+    global _cached_models
+    _cached_models = None
 
 # File extensions to include when scanning projects
 CODE_EXTENSIONS = {
@@ -1118,11 +1179,37 @@ class SettingsDialog(QDialog):
 
         api_layout.addWidget(QLabel("Model"))
         self.model_combo = QComboBox()
-        self.model_combo.addItems(MODELS)
-        current = self.config.get("model", MODELS[1])
-        if current in MODELS:
-            self.model_combo.setCurrentIndex(MODELS.index(current))
-        api_layout.addWidget(self.model_combo)
+        self.model_combo.setEditable(True)
+
+        # Fetch models from API (uses cache, falls back to hardcoded list)
+        api_key = self.config.get("api_key", "")
+        models = fetch_models(api_key)
+        self.model_combo.addItems(models)
+
+        current = self.config.get("model", "claude-sonnet-4-20250514")
+        idx = self.model_combo.findText(current)
+        if idx >= 0:
+            self.model_combo.setCurrentIndex(idx)
+        else:
+            self.model_combo.setCurrentText(current)
+
+        # Refresh button to re-fetch models
+        model_row = QHBoxLayout()
+        model_row.addWidget(self.model_combo, 1)
+        refresh_btn = QPushButton("↻")
+        refresh_btn.setToolTip("Refresh model list from API")
+        refresh_btn.setFixedSize(32, 32)
+        refresh_btn.setStyleSheet(f"""
+            QPushButton {{
+                background: transparent; color: {Colors.ACCENT};
+                border: 1px solid {Colors.ACCENT}; border-radius: 6px;
+                font-size: 16px; font-weight: bold;
+            }}
+            QPushButton:hover {{ background-color: {Colors.ACCENT_SUBTLE}; }}
+        """)
+        refresh_btn.clicked.connect(self._refresh_models)
+        model_row.addWidget(refresh_btn)
+        api_layout.addLayout(model_row)
 
         api_layout.addWidget(QLabel("System Prompt (optional)"))
         self.system_input = QPlainTextEdit()
@@ -1394,6 +1481,25 @@ class SettingsDialog(QDialog):
         save_btn.clicked.connect(self._save)
         btn_layout.addWidget(save_btn)
         layout.addLayout(btn_layout)
+
+    def _refresh_models(self):
+        """Re-fetch model list from the Anthropic API."""
+        api_key = self.api_key_input.text().strip()
+        if not api_key:
+            from PyQt6.QtWidgets import QMessageBox
+            QMessageBox.warning(self, "No API Key",
+                "Enter your API key first, then click refresh.")
+            return
+        invalidate_model_cache()
+        current = self.model_combo.currentText()
+        models = fetch_models(api_key)
+        self.model_combo.clear()
+        self.model_combo.addItems(models)
+        idx = self.model_combo.findText(current)
+        if idx >= 0:
+            self.model_combo.setCurrentIndex(idx)
+        else:
+            self.model_combo.setCurrentText(current)
 
     @staticmethod
     def _is_mono(family: str) -> bool:
@@ -1985,7 +2091,7 @@ class ClaudeDesktop(QMainWindow):
 
         self.worker = ApiWorker(
             api_key=self.config["api_key"],
-            model=self.config.get("model", MODELS[1]),
+            model=self.config.get("model", "claude-sonnet-4-20250514"),
             messages=self.messages,
             system_prompt=self._build_system_prompt(),
             max_tokens=self.config.get("max_tokens", 8192),
