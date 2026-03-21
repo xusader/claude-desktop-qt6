@@ -1,0 +1,10 @@
+[Desktop Entry]
+Name=Claude Desktop
+Comment=Native Qt6 desktop client for Claude AI
+Exec=claude-desktop
+Icon=claude-desktop
+Type=Application
+Categories=Utility;Chat;Network;
+Keywords=ai;claude;anthropic;chat;assistant;
+StartupWMClass=claude-desktop
+Terminal=false

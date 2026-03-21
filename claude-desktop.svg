@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#1a1e25;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#0d0f12;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="accent" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#e09568;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#d4845a;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  <rect width="256" height="256" rx="48" fill="url(#bg)"/>
+  <g transform="translate(128,128)">
+    <!-- Diamond shape -->
+    <path d="M 0,-56 L 42,-14 L 0,56 L -42,-14 Z"
+          fill="url(#accent)" opacity="0.95"/>
+    <!-- Inner highlight -->
+    <path d="M 0,-36 L 24,-8 L 0,36 L -24,-8 Z"
+          fill="none" stroke="#0d0f12" stroke-width="2" opacity="0.3"/>
+    <!-- Sparkle dots -->
+    <circle cx="-52" cy="-40" r="3" fill="#d4845a" opacity="0.6"/>
+    <circle cx="52" cy="40" r="3" fill="#d4845a" opacity="0.6"/>
+    <circle cx="56" cy="-36" r="2" fill="#d4845a" opacity="0.4"/>
+  </g>
+</svg>
