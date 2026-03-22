@@ -25,7 +25,7 @@ Glassmorphism UI with blur, pywal integration, project context loading, and full
 
 ```bash
 git clone https://github.com/xusader/claude-desktop.git
-cd claude-desktop
+cd claude-desktop-qt6
 makepkg -si
 ```
 

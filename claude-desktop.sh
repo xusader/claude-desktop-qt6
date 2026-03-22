@@ -11,7 +11,7 @@
 
 # Pass through --reload-colors to the Python script
 if [[ "$1" == "--reload-colors" ]]; then
-    exec python3 /usr/lib/claude-desktop/claude_desktop.py --reload-colors
+    exec python3 /usr/lib/claude-desktop-qt6/claude_desktop.py --reload-colors
     exit $?
 fi
 
@@ -24,4 +24,4 @@ if [[ "$XDG_CURRENT_DESKTOP" == *"KDE"* ]] || [[ "$XDG_CURRENT_DESKTOP" == *"pla
     fi
 fi
 
-exec python3 /usr/lib/claude-desktop/claude_desktop.py "$@"
+exec python3 /usr/lib/claude-desktop-qt6/claude_desktop.py "$@"
