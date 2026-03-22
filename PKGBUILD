@@ -1,5 +1,5 @@
 # Maintainer: xusader
-pkgname=claude-desktop
+pkgname=claude-desktop-qt6
 pkgver=1.0.0
 pkgrel=1
 pkgdesc="Native Qt6 desktop client for the Anthropic Claude API"
